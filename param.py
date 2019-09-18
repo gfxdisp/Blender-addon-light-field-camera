@@ -1,0 +1,112 @@
+import bpy
+from light_field_camera.render import RenderLightField
+from light_field_camera.util import create_plane
+
+P = bpy.props
+
+def base_x(self):
+    if self.plane:
+        return self.plane.scale[0] / max(1, self.num_cols-1)
+    else:
+        return 0
+def set_base_x(self, x):
+    if self.get('plane'):
+        self.plane.scale[0] = x * max(1, self.num_cols-1)
+def update_cols(self, context):
+    self.plane.scale[0] = self.base_x * max(1, self.num_cols-1)
+
+def base_y(self):
+    if self.plane:
+        return self.plane.scale[1] / max(1, self.num_rows-1)
+    else:
+        return 0
+def set_base_y(self, y):
+    if self.plane:
+        self.plane.scale[1] = y * max(1, self.num_rows-1)
+def update_rows(self, context):
+    self.plane.scale[0] = self.base_y * max(1, self.num_rows-1)
+
+
+def update_enabled(self, context):
+    if (not self.enabled) and self.plane: #enable
+        self['num_rows'] = 1
+        self['num_cols'] = 1
+        self['base_x'] = 1
+        self['base_y'] = 1
+        bpy.data.objects.remove(self.plane, do_unlink=True)
+        self['plane'] = None
+    elif self.enabled and (not self.plane): # disable
+        cam = bpy.context.object
+        plane = create_plane(context, size=1.0)
+        self['plane'] = plane
+        c = plane.constraints.new('COPY_LOCATION')
+        c.target = cam
+        c = plane.constraints.new('COPY_ROTATION')
+        c.target = cam
+        plane.hide_render = True
+        plane.hide_select = True
+        plane.display_type = 'WIRE'
+
+
+class LFProperty(bpy.types.PropertyGroup):
+    enabled: P.BoolProperty(
+        name='enabled',
+        default=False,
+        description='enable camera to render light field',
+        update=update_enabled)
+
+    num_rows: P.IntProperty(
+        name='rows',
+        default=1,
+        description='number of rows of the camera array')
+    num_cols: P.IntProperty(
+        name='cols',
+        default=1,
+        description='number of columns of the camera array')
+    base_x: P.FloatProperty(
+        name='base x',
+        get=base_x,
+        set=set_base_x,
+        description='the x baseline between each camera')
+    base_y: P.FloatProperty(
+        name='base y',
+        get=base_y,
+        set=set_base_y,
+        description='the y baseline distance between each camera')
+
+    plane: P.PointerProperty(
+        type=bpy.types.Object,
+        name='plane',
+        poll=(lambda self, object: object.type=='MESH'),
+        description='the plane for camera array')
+
+
+class LFPanel(bpy.types.Panel):
+    bl_idname = 'OBJECT_PT_lightfield_camera'
+    bl_label = 'Light Field'
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = 'data'
+
+    def draw(self, ctx):
+        # default spec
+        layout = self.layout
+        lf = ctx.object.lightfield
+        layout.prop(lf, 'enabled', text='Enable Light Field Camera')
+        if lf.enabled:
+            layout.operator(
+                RenderLightField.bl_idname,
+                text='Render LightField',
+                icon='SCENE')
+            row = layout.row(align=True)
+            row.prop(lf, 'num_cols')
+            row.prop(lf, 'num_rows')
+            row = layout.row(align=True)
+            row.prop(lf, 'base_x')
+            row.prop(lf, 'base_y')
+
+    @classmethod
+    def poll(cls, ctx):
+        return ((ctx.object is not None)
+                and ctx.object.type == 'CAMERA')
+
