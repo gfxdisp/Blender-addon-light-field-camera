@@ -19,8 +19,8 @@ class CamPoses(object):
         lf = cam.lightfield
         self.grid = (lf.num_rows, lf.num_cols)
         dir = lf.plane.matrix_world.to_3x3().normalized()
-        self.dx = dir @ Vector((1., 0., 0.)) * lf.base_x
-        self.dy = dir @ Vector((0., -1., 0.)) * lf.base_y
+        self.dx = dir @ Vector((-1., 0., 0.)) * lf.base_x
+        self.dy = dir @ Vector((0., 1., 0.)) * lf.base_y
 
     def __len__(self):
         return self.grid[0] * self.grid[1]

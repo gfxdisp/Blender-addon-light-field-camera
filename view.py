@@ -1,11 +1,20 @@
 import bpy
 from light_field_camera.util import CamPoses
 
+def register():
+    bpy.utils.register_class(PreviewLightField)
+    bpy.types.VIEW3D_MT_view_viewpoint.append(add_preview_lightfield)
+
+def unregister():
+    bpy.utils.unregister_class(PreviewLightField)
+    bpy.types.VIEW3D_MT_view_viewpoint.remove(add_preview_lightfield)
+
 def add_preview_lightfield(self, context):
     self.layout.operator(
         PreviewLightField.bl_idname,
         text='Eanble LightField View',
         icon='VIEW3D')
+    bpy.types.VIEW3D_MT_view_viewpoint.remove(add_preview_lightfield)
 
 class PreviewLightField(bpy.types.Operator):
     bl_idname = "view3d.lightfield_preview"

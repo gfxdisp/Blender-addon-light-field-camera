@@ -30,28 +30,23 @@ import light_field_camera.render as render
 import light_field_camera.param as param
 import light_field_camera.util as util
 import light_field_camera.view as view
+import light_field_camera.scene as scene
 import importlib
 importlib.reload(render)
 importlib.reload(param)
 importlib.reload(util)
 importlib.reload(view)
+importlib.reload(scene)
 
 def register():
-    bpy.utils.register_class(render.RenderLightField)
-    bpy.utils.register_class(view.PreviewLightField)
-
-    bpy.utils.register_class(param.LFPanel)
-    bpy.utils.register_class(param.LFProperty)
-    bpy.types.Object.lightfield = bpy.props.PointerProperty(
-        type=param.LFProperty)
-    bpy.types.VIEW3D_MT_view_viewpoint.append(view.add_preview_lightfield)
+    param.register()
+    render.register()
+    view.register()
+    scene.register()
 
 
 def unregister():
-    bpy.utils.unregister_class(render.RenderLightField)
-    bpy.utils.unregister_class(view.PreviewLightField)
-
-    bpy.utils.unregister_class(param.LFPanel)
-    bpy.utils.unregister_class(param.LFProperty)
-    del bpy.types.Object.lightfield
-    bpy.types.VIEW3D_MT_view_viewpoint.remove(view.add_preview_lightfield)
+    param.unregister()
+    render.unregister()
+    view.unregister()
+    scene.unregister()

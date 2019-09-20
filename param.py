@@ -2,7 +2,16 @@ import bpy
 from light_field_camera.render import RenderLightField
 from light_field_camera.util import create_plane
 
-P = bpy.props
+def register():
+    bpy.utils.register_class(LFProperty)
+    bpy.utils.register_class(LFPanel)
+    lf = bpy.props.PointerProperty(type=LFProperty)
+    bpy.types.Object.lightfield = lf
+
+def unregister():
+    bpy.utils.unregister_class(LFProperty)
+    bpy.utils.unregister_class(LFPanel)
+    del bpy.types.Object.lightfield
 
 def base_x(self):
     if self.plane:
@@ -49,32 +58,36 @@ def update_enabled(self, context):
 
 
 class LFProperty(bpy.types.PropertyGroup):
-    enabled: P.BoolProperty(
+    enabled: bpy.props.BoolProperty(
         name='enabled',
         default=False,
         description='enable camera to render light field',
         update=update_enabled)
 
-    num_rows: P.IntProperty(
+    num_rows: bpy.props.IntProperty(
         name='rows',
         default=1,
+        soft_min=0,
         description='number of rows of the camera array')
-    num_cols: P.IntProperty(
+    num_cols: bpy.props.IntProperty(
         name='cols',
         default=1,
+        soft_min=0,
         description='number of columns of the camera array')
-    base_x: P.FloatProperty(
+    base_x: bpy.props.FloatProperty(
         name='base x',
+        soft_min=0,
         get=base_x,
         set=set_base_x,
         description='the x baseline between each camera')
-    base_y: P.FloatProperty(
+    base_y: bpy.props.FloatProperty(
         name='base y',
+        soft_min=0,
         get=base_y,
         set=set_base_y,
         description='the y baseline distance between each camera')
 
-    plane: P.PointerProperty(
+    plane: bpy.props.PointerProperty(
         type=bpy.types.Object,
         name='plane',
         poll=(lambda self, object: object.type=='MESH'),
@@ -88,22 +101,26 @@ class LFPanel(bpy.types.Panel):
     bl_region_type = 'WINDOW'
     bl_context = 'data'
 
+    def draw_header(self, ctx):
+        layout = self.layout
+        lf = ctx.object.lightfield
+        layout.prop(lf, 'enabled', text='', toggle=False)
+
     def draw(self, ctx):
         # default spec
         layout = self.layout
         lf = ctx.object.lightfield
-        layout.prop(lf, 'enabled', text='Enable Light Field Camera')
-        if lf.enabled:
-            layout.operator(
-                RenderLightField.bl_idname,
-                text='Render LightField',
-                icon='SCENE')
-            row = layout.row(align=True)
-            row.prop(lf, 'num_cols')
-            row.prop(lf, 'num_rows')
-            row = layout.row(align=True)
-            row.prop(lf, 'base_x')
-            row.prop(lf, 'base_y')
+        layout.enabled = lf.enabled
+        row = layout.row(align=True)
+        row.prop(lf, 'num_cols')
+        row.prop(lf, 'num_rows')
+        row = layout.row(align=True)
+        row.prop(lf, 'base_x')
+        row.prop(lf, 'base_y')
+        layout.operator(
+            RenderLightField.bl_idname,
+            text='Render LightField',
+            icon='SCENE')
 
     @classmethod
     def poll(cls, ctx):
