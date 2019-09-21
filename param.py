@@ -1,6 +1,6 @@
 import bpy
-from light_field_camera.render import RenderLightField
-from light_field_camera.util import create_plane
+from .render import RenderLightField
+from .util import create_plane
 
 def register():
     bpy.utils.register_class(LFProperty)

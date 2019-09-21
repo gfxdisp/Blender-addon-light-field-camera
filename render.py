@@ -1,5 +1,5 @@
 import bpy
-from light_field_camera.util import CamPoses
+from .util import CamPoses
 import os.path as path
 
 def register():
@@ -31,20 +31,20 @@ class RenderGeometry(bpy.types.Operator):
     def execute(self, context):
         geo = context.scene.geo
         idx = context.scene.frame_current
+        images = bpy.data.images
         if geo.enabled:
             self.init(context)
             bpy.ops.render.render()
             self.clear(context)
-            checks = [
-                (geo.depth, f'depth{idx:04d}.exr'),
-                (geo.normal, f'normal{idx:04d}.exr'),
-                (geo.flow, f'flow{idx:04d}.exr')
-            ]
-            for check, file in checks:
-                if check:
-                    bpy.data.images.load(
-                        path.join(geo.base_path, file),
+            types = [ 'depth', 'normal', 'flow' ]
+            for type in types:
+                if geo[type]:
+                    images.load(
+                            path.join(geo.base_path, f'{type}{idx:04d}.exr'),
                         check_existing=False)
+                    if images.get(type):
+                        images.remove(images[type])
+                    images[f'{type}{idx:04d}.exr'].name = f'geo_{type}'
         return {'FINISHED'}
 
 class RenderLightField(bpy.types.Operator):
@@ -54,17 +54,16 @@ class RenderLightField(bpy.types.Operator):
     rendering = False
     done = False
     timer = None
-    path = ''
-
-    progress = 0
-    camera = None
     poses = None
+    progress = 0
+
+    path: bpy.props.StringProperty(default='')
 
     def pre(self, scene):
         print(f'render on {self.progress:03d}/{len(self.poses):03d}')
         save_path = path.join(self.path, f'{self.progress:02d}')
         scene.render.filepath = save_path
-        self.camera.location = self.poses[self.progress]
+        scene.camera.location = self.poses[self.progress]
         self.rendering = True
 
     def post(self, scene):
@@ -74,7 +73,7 @@ class RenderLightField(bpy.types.Operator):
 
     def init(self, context):
         self.rendering = False
-        self.poses = CamPoses(self.camera)
+        self.poses = CamPoses(context.scene.camera)
         self.progress = 0
         self.path = context.scene.render.filepath
         bpy.app.handlers.render_pre.append(self.pre)
@@ -90,14 +89,14 @@ class RenderLightField(bpy.types.Operator):
         bpy.app.handlers.render_post.remove(self.post)
         bpy.app.handlers.render_cancel.remove(self.clear)
 
-        self.camera.location = self.poses.pos
+        context.scene.camera.location = self.poses.pos
 
     def invoke(self, context, event):
         context.window_manager.modal_handler_add(self)
         self.timer = context.window_manager.event_timer_add(
             0.5, window=context.window)
-        self.camera = context.object
-        context.scene.camera = self.camera
+        if context.object.type == 'CAMERA':
+            context.scene.camera = context.object
         self.init(context)
         return {'RUNNING_MODAL'}
 
@@ -118,9 +117,6 @@ class RenderLightField(bpy.types.Operator):
         return {'PASS_THROUGH'}
 
     def execute(self, context):
-        if not (context.object and context.object.lightfield.enabled):
-            return {'FINISHED'}
-        self.camera = context.scene.camera
         self.init(context)
         while not self.done:
             bpy.ops.render.render(write_still=True)

@@ -1,6 +1,13 @@
 import bpy
 import bmesh
 from mathutils import Vector
+import numpy as np
+
+def im2arr(image):
+    h, w = image.size
+    c = image.channels
+    arr = np.array(image.pixels[:], shape=(h, w, c))
+    return arr
 
 
 def create_plane(context, size=1):
@@ -18,7 +25,7 @@ class CamPoses(object):
         self.pos = Vector(cam.location)
         lf = cam.lightfield
         self.grid = (lf.num_rows, lf.num_cols)
-        dir = lf.plane.matrix_world.to_3x3().normalized()
+        dir = cam.matrix_world.to_3x3().normalized()
         self.dx = dir @ Vector((-1., 0., 0.)) * lf.base_x
         self.dy = dir @ Vector((0., 1., 0.)) * lf.base_y
 

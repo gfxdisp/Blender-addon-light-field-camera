@@ -26,11 +26,12 @@ import bpy
 C = bpy.context
 D = bpy.data
 
-import light_field_camera.render as render
-import light_field_camera.param as param
-import light_field_camera.util as util
-import light_field_camera.view as view
-import light_field_camera.scene as scene
+from . import render
+from . import param
+from . import util
+from . import view
+from . import scene
+
 import importlib
 importlib.reload(render)
 importlib.reload(param)

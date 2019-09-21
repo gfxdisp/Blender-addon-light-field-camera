@@ -1,5 +1,5 @@
 import bpy
-from light_field_camera.util import CamPoses
+from .util import CamPoses
 
 def register():
     bpy.utils.register_class(PreviewLightField)
