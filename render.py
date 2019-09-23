@@ -76,8 +76,8 @@ class RenderLightField(bpy.types.Operator):
         self.poses = CamPoses(context.scene.camera)
         self.progress = 0
         self.path = context.scene.render.filepath
-        bpy.app.handlers.render_pre.append(self.pre)
-        bpy.app.handlers.render_post.append(self.post)
+        bpy.app.handlers.render_init.append(self.pre)
+        bpy.app.handlers.render_write.append(self.post)
         bpy.app.handlers.render_cancel.append(self.clear)
 
     def cancel(self, context):
@@ -85,8 +85,8 @@ class RenderLightField(bpy.types.Operator):
 
     def clear(self, context):
         context.scene.render.filepath = self.path
-        bpy.app.handlers.render_pre.remove(self.pre)
-        bpy.app.handlers.render_post.remove(self.post)
+        bpy.app.handlers.render_init.remove(self.pre)
+        bpy.app.handlers.render_write.remove(self.post)
         bpy.app.handlers.render_cancel.remove(self.clear)
 
         context.scene.camera.location = self.poses.pos
