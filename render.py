@@ -38,7 +38,7 @@ class RenderGeometry(bpy.types.Operator):
             self.clear(context)
             types = [ 'depth', 'normal', 'flow' ]
             for type in types:
-                if geo[type]:
+                if getattr(geo, type):
                     images.load(
                             path.join(geo.base_path, f'{type}{idx:04d}.exr'),
                         check_existing=False)
