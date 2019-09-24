@@ -1,5 +1,5 @@
 import bpy
-from .render import RenderLightField
+from .render import RenderLightField, RenderDisparity
 from .util import create_plane
 
 def register():
@@ -55,6 +55,7 @@ def update_enabled(self, context):
         plane.hide_render = True
         plane.hide_select = True
         plane.display_type = 'WIRE'
+        cam.data.sensor_fit = 'AUTO'
 
 
 class LFProperty(bpy.types.PropertyGroup):
@@ -86,6 +87,16 @@ class LFProperty(bpy.types.PropertyGroup):
         get=base_y,
         set=set_base_y,
         description='the y baseline distance between each camera')
+    min_depth: bpy.props.FloatProperty(default=0)
+    max_depth: bpy.props.FloatProperty(default=0)
+    max_disp: bpy.props.FloatProperty(
+        name='max disparity',
+        description='the maximum disparity',
+        get=lambda self: self.base_x/self.max_depth)
+    min_disp: bpy.props.FloatProperty(
+        name='min disparity',
+        description='the minimum disparity',
+        get=lambda self: self.base_y/self.min_depth)
 
     plane: bpy.props.PointerProperty(
         type=bpy.types.Object,
@@ -117,10 +128,19 @@ class LFPanel(bpy.types.Panel):
         row = layout.row(align=True)
         row.prop(lf, 'base_x')
         row.prop(lf, 'base_y')
+        layout.separator()
         layout.operator(
             RenderLightField.bl_idname,
             text='Render LightField',
             icon='SCENE')
+        layout.operator(
+            RenderDisparity.bl_idname,
+            text='Render Disparity Map',
+            icon='SCENE')
+        row = layout.row(align=True)
+        row.enabled = False
+        row.prop(lf, 'max_disp', slider=False)
+        row.prop(lf, 'min_disp', slider=False)
 
     @classmethod
     def poll(cls, ctx):

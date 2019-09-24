@@ -1,14 +1,18 @@
 import bpy
-from .util import CamPoses
+from . import util
 import os.path as path
+import numpy as np
+from imageio import imwrite, imread
 
 def register():
     bpy.utils.register_class(RenderLightField)
     bpy.utils.register_class(RenderGeometry)
+    bpy.utils.register_class(RenderDisparity)
 
 def unregister():
     bpy.utils.unregister_class(RenderLightField)
     bpy.utils.unregister_class(RenderGeometry)
+    bpy.utils.unregister_class(RenderDisparity)
 
 class RenderGeometry(bpy.types.Operator):
     bl_idname = "render.geometry_render"
@@ -23,29 +27,90 @@ class RenderGeometry(bpy.types.Operator):
         self.samples = scene.eevee.taa_render_samples
         scene.eevee.taa_render_samples = 1 # sampling does not matter in this case
 
+    def post(self, context):
+        images = bpy.data.images
+        geo = context.scene.geo
+        idx = context.scene.frame_current
+        types = [ 'depth', 'normal', 'flow' ]
+        geo = context.scene.geo
+        for type in types:
+            if getattr(geo, type):
+                image = images.load(
+                        path.join(geo.base_path, f'{type}{idx:04d}.exr'),
+                        check_existing=False)
+                key = f'geo_{type}'
+                if images.get(key):
+                    images.remove(images[key])
+                image.name = key
+
     def clear(self, context):
         scene = context.scene
         scene.eevee.taa_render_samples = self.samples
         scene.render.engine = self.engine
 
     def execute(self, context):
-        geo = context.scene.geo
-        idx = context.scene.frame_current
-        images = bpy.data.images
-        if geo.enabled:
+        if context.scene.geo.enabled:
             self.init(context)
             bpy.ops.render.render()
+            self.post(context)
             self.clear(context)
-            types = [ 'depth', 'normal', 'flow' ]
-            for type in types:
-                if getattr(geo, type):
-                    images.load(
-                            path.join(geo.base_path, f'{type}{idx:04d}.exr'),
-                        check_existing=False)
-                    if images.get(type):
-                        images.remove(images[type])
-                    images[f'{type}{idx:04d}.exr'].name = f'geo_{type}'
         return {'FINISHED'}
+
+class RenderDisparity(bpy.types.Operator):
+    bl_idname = "render.disparity"
+    bl_label = "render light field disparity"
+
+    setup = {}
+
+    def disparity(self, context):
+        cam = context.scene.camera
+        images = bpy.data.images
+        im_depth = images['geo_depth']
+        z = imread(im_depth.filepath)
+        b = cam.lightfield.base_x
+        # TODO: check all units
+        f = cam.data.lens # focal length
+        s = cam.data.sensor_width #  sensor size
+        r = context.scene.render.resolution_x # resolution
+        disparity = (f*b*r)/(s*z)
+        filepath = path.join(context.scene.render.filepath, 'disparity')
+        cam.lightfield.max_depth = z.max() * s / (f*r)
+        cam.lightfield.min_depth = z.min() * s / (f*r)
+        print(f"#######{disparity.max()},{disparity.min()}#########")
+        imwrite(filepath+'.exr', disparity)
+        image = images.load(filepath=filepath, check_existing=False)
+        key = 'lf_disparity'
+        if images.get(key):
+            images.remove(images[key])
+        image.name = key
+
+    def init(self, context):
+        scene = context.scene
+        for type in ['depth', 'normal', 'flow', 'enabled']:
+            self.setup[f'geo_{type}'] = getattr(scene.geo, type)
+        scene.geo.enabled = True
+        scene.geo.depth = True
+        scene.geo.normal = False
+        scene.geo.flow = False
+
+    def clear(self, context):
+        scene = context.scene
+        for type in ['depth', 'normal', 'flow', 'enabled']:
+            setattr(scene.geo, type, self.setup[f'geo_{type}'])
+
+    def invoke(self, context, event):
+        if context.object.type == 'CAMERA' and context.object.lightfield == 'enabled':
+            context.scene.camera = context.object
+        self.execute(context)
+        return {'FINISHED'}
+
+    def execute(self, context):
+        self.init(context)
+        bpy.ops.render.geometry_render()
+        self.disparity(context)
+        self.clear(context)
+        return {'FINISHED'}
+
 
 class RenderLightField(bpy.types.Operator):
     bl_idname = "render.lightfield_render"
@@ -63,8 +128,8 @@ class RenderLightField(bpy.types.Operator):
         lf = context.scene.camera.lightfield
         with open(path.join(self.path, 'param.txt'), 'w') as f:
             f.write(f'cmera: {context.scene.camera.name}\n')
-            f.write(f'num_x: {lf.num_x}\n')
-            f.write(f'num_y: {lf.num_y}\n')
+            f.write(f'num_x: {lf.num_cols}\n')
+            f.write(f'num_y: {lf.num_rows}\n')
             f.write(f'base_x: {lf.base_x}\n')
             f.write(f'base_y: {lf.base_y}\n')
 
@@ -83,7 +148,7 @@ class RenderLightField(bpy.types.Operator):
 
     def init(self, context):
         self.rendering = False
-        self.poses = CamPoses(context.scene.camera)
+        self.poses = util.CamPoses(context.scene.camera)
         self.progress = 0
         self.path = context.scene.render.filepath
         bpy.app.handlers.render_init.append(self.pre)

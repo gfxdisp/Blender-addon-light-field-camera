@@ -3,12 +3,12 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-def im2arr(image):
-    h, w = image.size
+def im2arr(imname):
+    image = bpy.data.images[imname]
+    w, h = image.size
     c = image.channels
-    arr = np.array(image.pixels[:], shape=(h, w, c))
+    arr = np.array(image.pixels[:]).reshape((h, w, c))
     return arr
-
 
 def create_plane(context, size=1):
     x = size / 2
