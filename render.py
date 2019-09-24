@@ -59,9 +59,19 @@ class RenderLightField(bpy.types.Operator):
 
     path: bpy.props.StringProperty(default='')
 
+    def write_meta(self, context):
+        lf = context.scene.camera.lightfield
+        with open(path.join(self.path, 'param.txt'), 'w') as f:
+            f.write(f'cmera: {context.scene.camera.name}\n')
+            f.write(f'num_x: {lf.num_x}\n')
+            f.write(f'num_y: {lf.num_y}\n')
+            f.write(f'base_x: {lf.base_x}\n')
+            f.write(f'base_y: {lf.base_y}\n')
+
     def pre(self, scene):
         print(f'render on {self.progress:03d}/{len(self.poses):03d}')
-        save_path = path.join(self.path, f'{self.progress:02d}')
+        s, t = self.poses.idx2pos(self.progress)
+        save_path = path.join(self.path, f'{s:02}_{t:02}')
         scene.render.filepath = save_path
         scene.camera.location = self.poses[self.progress]
         self.rendering = True
@@ -95,9 +105,10 @@ class RenderLightField(bpy.types.Operator):
         context.window_manager.modal_handler_add(self)
         self.timer = context.window_manager.event_timer_add(
             0.5, window=context.window)
-        if context.object.type == 'CAMERA':
+        if context.object.type == 'CAMERA' and context.object.lightfield.enabled:
             context.scene.camera = context.object
         self.init(context)
+        self.write_meta(context)
         return {'RUNNING_MODAL'}
 
     def modal(self, context, event):
@@ -118,6 +129,7 @@ class RenderLightField(bpy.types.Operator):
 
     def execute(self, context):
         self.init(context)
+        self.write_meta(context)
         while not self.done:
             bpy.ops.render.render(write_still=True)
         self.clear(context)

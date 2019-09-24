@@ -35,7 +35,7 @@ class CamPoses(object):
     def __getitem__(self, index):
         S, T = self.grid
         if isinstance(index, int):
-            s, t = index // T, index % T
+            s, t = self.idx2pos(index)
         else:
             s, t = index
         dx = self.dx * (2*t/(T-1)-1) if T > 1 else Vector((0,0,0))
@@ -45,3 +45,11 @@ class CamPoses(object):
     def bound(self, s, t):
         S, T = self.grid
         return (max(0, min(s, S-1)), max(0, min(t, T-1)))
+
+    def pos2idx(self, s, t):
+        T = self.grid[1]
+        return s*T+t
+
+    def idx2pos(self, index):
+        T = self.grid[1]
+        return index // T, index % T
