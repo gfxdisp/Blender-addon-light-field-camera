@@ -3,12 +3,29 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-def im2arr(imname):
-    image = bpy.data.images[imname]
+def imread(path):
+    image = bpy.data.images.load(path, check_existing=False)
     w, h = image.size
     c = image.channels
     arr = np.array(image.pixels[:]).reshape((h, w, c))
+    bpy.data.images.remove(image)
     return arr
+
+def imwrite(path, data, mode='OPEN_EXR'):
+    images = bpy.data.images
+    H, W, C = data.shape
+    assert C == 4
+    image = images.new(
+        name='imwrite', width=W, height=H,
+        float_buffer=True, alpha=False)
+    image.pixels[:] = data.ravel()
+    if mode == 'OPEN_EXR' and not path.endswith('.exr'):
+        path += '.exr'
+    image.filepath = path
+    image.file_format = mode
+    image.save()
+    images.remove(images['imwrite'])
+
 
 def create_plane(context, size=1):
     x = size / 2

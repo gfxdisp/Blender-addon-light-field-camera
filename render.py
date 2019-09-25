@@ -2,7 +2,6 @@ import bpy
 from . import util
 import os.path as path
 import numpy as np
-from imageio import imwrite, imread
 
 def register():
     bpy.utils.register_class(RenderLightField)
@@ -18,14 +17,16 @@ class RenderGeometry(bpy.types.Operator):
     bl_idname = "render.geometry_render"
     bl_label = "render geometry"
 
-    engine = 'EEVEE'
     samples = 1
 
     def init(self, context):
         scene = context.scene
-        self.engine = scene.render.engine
-        self.samples = scene.eevee.taa_render_samples
-        scene.eevee.taa_render_samples = 1 # sampling does not matter in this case
+        if scene.render.engine == 'CYCLES':
+            self.samples = scene.cycles.samples
+            scene.cycles.samples = 1
+        elif scene.render.engine == 'BLENDER_EEVEE':
+            self.samples = scene.eevee.taa_render_samples
+            scene.eevee.taa_render_samples = 1 # sampling does not matter in this case
 
     def post(self, context):
         images = bpy.data.images
@@ -45,8 +46,10 @@ class RenderGeometry(bpy.types.Operator):
 
     def clear(self, context):
         scene = context.scene
-        scene.eevee.taa_render_samples = self.samples
-        scene.render.engine = self.engine
+        if scene.render.engine == 'CYCLES':
+            scene.cycles.samples = self.samples
+        elif scene.render.engine == 'BLENDER_EEVEE':
+            scene.eevee.taa_render_samples = self.samples
 
     def execute(self, context):
         if context.scene.geo.enabled:
@@ -63,10 +66,11 @@ class RenderDisparity(bpy.types.Operator):
     setup = {}
 
     def disparity(self, context):
+        # from imageio import imwrite, imread
         cam = context.scene.camera
         images = bpy.data.images
         im_depth = images['geo_depth']
-        z = imread(im_depth.filepath)
+        z = util.imread(im_depth.filepath)[...,0]
         b = cam.lightfield.base_x
         # TODO: check all units
         f = cam.data.lens # focal length
@@ -76,13 +80,13 @@ class RenderDisparity(bpy.types.Operator):
         filepath = path.join(context.scene.render.filepath, 'disparity')
         cam.lightfield.max_depth = z.max() * s / (f*r)
         cam.lightfield.min_depth = z.min() * s / (f*r)
-        print(f"#######{disparity.max()},{disparity.min()}#########")
-        imwrite(filepath+'.exr', disparity)
-        image = images.load(filepath=filepath, check_existing=False)
-        key = 'lf_disparity'
-        if images.get(key):
-            images.remove(images[key])
-        image.name = key
+        np.save(filepath, disparity)
+        # util.imwrite(filepath, disparity)
+        # image = images.load(filepath=filepath+'.exr', check_existing=False)
+        # key = 'lf_disparity'
+        # if images.get(key):
+        #     images.remove(images[key])
+        # image.name = key
 
     def init(self, context):
         scene = context.scene
@@ -200,6 +204,4 @@ class RenderLightField(bpy.types.Operator):
         self.clear(context)
 
         return {'FINISHED'}
-
-
 
