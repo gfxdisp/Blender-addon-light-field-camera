@@ -20,7 +20,13 @@ def base_x(self):
         return 0
 def set_base_x(self, x):
     if self.get('plane'):
+        self.max_disp /= self.base_x
+        self.min_disp /= self.base_x
         self.plane.scale[0] = x * max(1, self.num_cols-1)
+        self.max_disp *= self.base_x
+        self.min_disp *= self.base_x
+
+
 def update_cols(self, context):
     self.plane.scale[0] = self.base_x * max(1, self.num_cols-1)
 
@@ -45,7 +51,7 @@ def update_enabled(self, context):
         bpy.data.objects.remove(self.plane, do_unlink=True)
         self['plane'] = None
     elif self.enabled and (not self.plane): # disable
-        cam = bpy.context.object
+        cam = context.object
         plane = create_plane(context, size=1.0)
         self['plane'] = plane
         c = plane.constraints.new('COPY_LOCATION')
@@ -55,7 +61,7 @@ def update_enabled(self, context):
         plane.hide_render = True
         plane.hide_select = True
         plane.display_type = 'WIRE'
-        cam.data.sensor_fit = 'AUTO'
+        # cam.data.sensor_fit = 'AUTO'
 
 
 class LFProperty(bpy.types.PropertyGroup):
@@ -87,16 +93,14 @@ class LFProperty(bpy.types.PropertyGroup):
         get=base_y,
         set=set_base_y,
         description='the y baseline distance between each camera')
-    min_depth: bpy.props.FloatProperty(default=0)
-    max_depth: bpy.props.FloatProperty(default=0)
     max_disp: bpy.props.FloatProperty(
         name='max disparity',
-        description='the maximum disparity',
-        get=lambda self: self.base_x/self.max_depth)
+        default=0,
+        description='the maximum disparity')
     min_disp: bpy.props.FloatProperty(
         name='min disparity',
-        description='the minimum disparity',
-        get=lambda self: self.base_y/self.min_depth)
+        default=0,
+        description='the minimum disparity')
 
     plane: bpy.props.PointerProperty(
         type=bpy.types.Object,
@@ -137,10 +141,11 @@ class LFPanel(bpy.types.Panel):
             RenderDisparity.bl_idname,
             text='Render Disparity Map',
             icon='SCENE')
-        row = layout.row(align=True)
-        row.enabled = False
-        row.prop(lf, 'max_disp', slider=False)
-        row.prop(lf, 'min_disp', slider=False)
+        if lf.max_disp > 0:
+            row = layout.row(align=True)
+            row.enabled = False
+            row.prop(lf, 'max_disp', slider=False)
+            row.prop(lf, 'min_disp', slider=False)
 
     @classmethod
     def poll(cls, ctx):

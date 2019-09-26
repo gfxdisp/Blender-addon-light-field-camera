@@ -22,6 +22,7 @@ def update_enabled(self, context):
 
 def compositor_init(scene):
     scene.use_nodes = True
+    scene.render.use_compositing = True
 
     nodes = scene.node_tree.nodes
     links = scene.node_tree.links
@@ -53,9 +54,9 @@ def compositor_init(scene):
 
 def compositor_destroy(scene):
     nodes = scene.node_tree.nodes
-    nodes.remove(nodes['GeoFrame'])
-    nodes.remove(nodes['GeoRender'])
-    nodes.remove(nodes['GeoFile'])
+    for nodename in ['GeoFrame', 'GeoRender', 'GeoFile']:
+        if nodes.get(nodename):
+            nodes.remove(nodes[nodename])
     for node in nodes:
         if node.type == 'OUTPUT_FILE':
             node.mute = False
