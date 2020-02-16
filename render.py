@@ -40,7 +40,7 @@ class RenderGeometry(bpy.types.Operator):
     def cancel(self, context):
         self.done = True
 
-    def post(self, scene):
+    def post(self, scene, *args):
         self.done = True
         for type in ['depth', 'normal', 'flow']:
             geo = scene.geo
@@ -150,7 +150,7 @@ class RenderLightField(bpy.types.Operator):
             f.write(f'base_x: {lf.base_x}\n')
             f.write(f'base_y: {lf.base_y}\n')
 
-    def pre(self, scene):
+    def pre(self, scene, *args):
         print(f'render on {self.progress:03d}/{len(self.poses):03d}')
         s, t = self.poses.idx2pos(self.progress)
         save_path = path.join(self.path, f'{s:02}_{t:02}')
@@ -158,7 +158,7 @@ class RenderLightField(bpy.types.Operator):
         scene.camera.location = self.poses[self.progress]
         self.rendering = True
 
-    def post(self, scene):
+    def post(self, scene, *args):
         self.progress += 1
         self.rendering = False
         self.done = self.progress >= len(self.poses)
