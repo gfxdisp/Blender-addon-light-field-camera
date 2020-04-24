@@ -45,13 +45,26 @@ When rendering, press `esc` to interrupt rendering.
 
 When the light field is enabled of a certain camera, there is a rectangle outline associate with the camera shown in the 3D view. The size of the camera bound the range of the camera grid.
 
- 
 
 ### Using in script
 
 You can also use this as script.
 
- 
+For each camera, there is an additional lightfield attribute. You can specify its `num_rows` `num_cols` `base_x` `base_y`. To render the light field, simply call `bpy.ops.render.lightfield()`. 
 
-    import bpy
-    import numpy as np
+```python
+import bpy
+import numpy as np
+
+def render(camera):
+    """
+        cam is the camera object
+        """
+        lf = camera.lightfield
+        lf.enabled = True
+        lf.num_rows = ... # input number of rows
+        lf.num_cols = ... # input number of columns
+        lf.base_x = ... # base x
+    lf.base_y = ... # base y
+        bpy.ops.render.lightfield()
+```
