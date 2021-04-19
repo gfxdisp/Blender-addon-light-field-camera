@@ -1,5 +1,6 @@
 import bpy
 import mathutils
+import tempfile
 from .render import RenderGeometry
 
 def register():
@@ -107,7 +108,7 @@ class GeoProperty(bpy.types.PropertyGroup):
         name='basepath',
         description='the output directory for rendered result',
         subtype='DIR_PATH',
-        default='/tmp/',
+        default=tempfile.gettempdir(),
         update=update_properties)
 
 class GeoPannel(bpy.types.Panel):
