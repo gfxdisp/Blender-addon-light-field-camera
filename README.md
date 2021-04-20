@@ -10,7 +10,7 @@ To install the plugin, you should go to the [Github](https://github.com/gfxdisp/
 
 ![./images/Untitled%201.png](./images/Untitled%201.png)
 
-Then open blender and select Edit/Preference → Add-ons, click "Install.." and select the zip file to install. Finally, click the box **Render:Light Field Camera**.
+Then open blender and select Edit/Preferences → Add-ons, click "Install.." and select the zip file to install. Finally, click the box **Render:Light Field Camera**.
 
 ![./images/Untitled%201.png](./images/Untitled%201.png)
 
